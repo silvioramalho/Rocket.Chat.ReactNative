@@ -8,7 +8,7 @@ import 'moment/min/locales';
 
 import * as types from '../actions/actionsTypes';
 import { appStart } from '../actions';
-import { serverFinishAdd, selectServerRequest } from '../actions/server';
+import { serverFinishAdd, serverRequest } from '../actions/server';
 import {
 	loginFailure, loginSuccess, setUser, logout
 } from '../actions/login';
@@ -22,6 +22,7 @@ import EventEmitter from '../utils/events';
 import { inviteLinksRequest } from '../actions/inviteLinks';
 import { showErrorAlert } from '../utils/info';
 import { localAuthenticate } from '../utils/localAuthentication';
+import appConfig from '../../app.json';
 import { setActiveUsers } from '../actions/activeUsers';
 
 const getServer = state => state.server.server;
@@ -165,25 +166,8 @@ const handleLogout = function* handleLogout({ forcedByServer }) {
 			if (forcedByServer) {
 				yield put(appStart('outside'));
 				showErrorAlert(I18n.t('Logged_out_by_server'), I18n.t('Oops'));
-				EventEmitter.emit('NewServer', { server });
 			} else {
-				const serversDB = database.servers;
-				// all servers
-				const serversCollection = serversDB.collections.get('servers');
-				const servers = yield serversCollection.query().fetch();
-
-				// see if there're other logged in servers and selects first one
-				if (servers.length > 0) {
-					for (let i = 0; i < servers.length; i += 1) {
-						const newServer = servers[i].id;
-						const token = yield RNUserDefaults.get(`${ RocketChat.TOKEN_KEY }-${ newServer }`);
-						if (token) {
-							return yield put(selectServerRequest(newServer));
-						}
-					}
-				}
-				// if there's no servers, go outside
-				yield put(appStart('outside'));
+				yield put(serverRequest(appConfig.server));
 			}
 		} catch (e) {
 			yield put(appStart('outside'));
